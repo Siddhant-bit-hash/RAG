@@ -10,42 +10,54 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f7f8fa;
         }
         #chat-container::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
         #chat-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #e5e7eb;
         }
         #chat-container::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+            background: #9ca3af;
+            border-radius: 3px;
         }
         #chat-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: #6b7280;
         }
         .prose {
             max-width: 100%;
         }
+        .prose strong { color: inherit; }
+        .prose em { color: inherit; }
+
         .user-message {
-            background-color: #dbeafe;
+            background-color: #2563eb;
+            color: #ffffff;
             align-self: flex-end;
+            border-bottom-right-radius: 4px;
         }
         .bot-message {
             background-color: #ffffff;
+            color: #374151;
             align-self: flex-start;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px;
         }
         .message-bubble {
-            max-width: 80%;
+            max-width: 85%;
             padding: 12px 16px;
             border-radius: 18px;
             word-wrap: break-word;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: transform 0.2s ease-in-out;
+        }
+        .message-bubble:hover {
+            transform: translateY(-2px);
         }
         .loader {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border-top: 4px solid #3b82f6;
             border-radius: 50%;
             width: 24px;
             height: 24px;
@@ -56,91 +68,95 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        #pdfUploadLabel.dragging {
+            background-color: #e0f2fe;
+            border-color: #3b82f6;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen antialiased text-gray-800">
 
-    <div class="flex-shrink-0 bg-white p-4 shadow-md z-10">
-        <div class="max-w-4xl mx-auto">
-            <h1 class="text-2xl font-bold text-center text-gray-700">Chat with PDF (Gemini Edition)</h1>
-            <p class="text-center text-sm text-gray-500 mt-1">Upload a PDF and ask questions about its content.</p>
+    <header class="flex-shrink-0 bg-white p-4 border-b border-gray-200 z-10">
+        <div class="max-w-6xl mx-auto flex items-center justify-center">
+            <svg class="w-8 h-8 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
+            </svg>
+            <h1 class="text-2xl font-bold text-center text-gray-800">Chat with PDF</h1>
         </div>
-    </div>
+    </header>
 
-    <div class="flex-grow flex flex-col md:flex-row max-w-7xl mx-auto w-full p-4 gap-4 overflow-hidden">
+    <main class="flex-grow flex flex-col md:flex-row max-w-6xl mx-auto w-full p-4 gap-6 overflow-y-auto">
         
         <!-- Left Panel: Controls -->
-        <div class="w-full md:w-1/3 flex flex-col gap-4">
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h2 class="text-lg font-semibold mb-3 text-gray-700">1. Set API Key</h2>
-                <input type="password" id="apiKey" placeholder="Enter your Google AI API Key" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <p class="text-xs text-gray-500 mt-2">Your key is used only for API calls and is not stored.</p>
-            </div>
-
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h2 class="text-lg font-semibold mb-3 text-gray-700">2. Upload PDF</h2>
-                <div class="flex items-center justify-center w-full">
-                    <label for="pdfUpload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg class="w-8 h-8 mb-2 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+        <div class="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+                <h2 class="text-lg font-semibold mb-3 text-gray-700">Upload Document</h2>
+                <div class="flex items-center justify-center w-full flex-grow">
+                    <label id="pdfUploadLabel" for="pdfUpload" class="flex flex-col items-center justify-center w-full h-full border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                            <svg class="w-10 h-10 mb-3 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
                             </svg>
-                            <p class="mb-1 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                            <p class="mb-1 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag & drop</p>
                         </div>
                         <input id="pdfUpload" type="file" class="hidden" accept=".pdf" />
                     </label>
                 </div> 
-                <p id="pdfStatus" class="text-sm text-center text-gray-600 mt-3">No file selected.</p>
-            </div>
-             <div id="processing-indicator" class="hidden items-center justify-center text-gray-600">
-                <div class="loader"></div>
-                <span>Processing PDF...</span>
+                <p id="pdfStatus" class="text-sm text-center text-gray-600 mt-4 truncate">No file selected.</p>
+                <div id="processing-indicator" class="hidden items-center justify-center text-gray-600 mt-2">
+                    <div class="loader !w-4 !h-4 !mr-2"></div>
+                    <span class="text-sm">Processing PDF...</span>
+                </div>
             </div>
         </div>
 
         <!-- Right Panel: Chat Interface -->
-        <div class="w-full md:w-2/3 flex flex-col bg-white rounded-lg shadow">
-            <div id="chat-container" class="flex-grow p-6 overflow-y-auto">
+        <div class="w-full md:w-2/3 lg:w-3/4 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200">
+            <div id="chat-container" class="flex-grow p-6 overflow-y-auto bg-gray-50 rounded-t-xl">
                 <div class="flex flex-col gap-4">
                     <!-- Chat messages will be appended here -->
                      <div class="bot-message message-bubble">
-                        <div class="prose">Hello! Please provide your API key and upload a PDF to get started.</div>
+                        <div class="prose">Hello! Please upload a PDF document to get started.</div>
                     </div>
                 </div>
             </div>
             
             <!-- Message Input -->
-            <div class="p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+            <div class="p-4 bg-white border-t border-gray-200 rounded-b-xl">
                 <div class="relative flex">
-                    <input type="text" id="userInput" placeholder="Ask a question about the PDF..." class="w-full p-3 pr-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
-                    <button id="sendButton" class="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                    <input type="text" id="userInput" placeholder="Ask a question about the PDF..." class="w-full p-3 pl-5 pr-14 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" disabled>
+                    <button id="sendButton" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-transform active:scale-95" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+                          <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.826L11.25 9.25v1.5l-7.5 1.548a.75.75 0 00-.95.826l1.414 4.949a.75.75 0 00.95.826L16.25 12l-13.145-9.711z" />
                         </svg>
                     </button>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
+        // --- Setup ---
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-        const apiKeyInput = document.getElementById('apiKey');
+        const GEMINI_API_KEY = "AIzaSyDgGofjdWHlMCuU_06tC-VOOP0Am5nDmEY";
+
+        // --- DOM Elements ---
         const pdfUploadInput = document.getElementById('pdfUpload');
+        const pdfUploadLabel = document.getElementById('pdfUploadLabel');
         const pdfStatus = document.getElementById('pdfStatus');
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
         const chatContainer = document.getElementById('chat-container').firstElementChild;
         const processingIndicator = document.getElementById('processing-indicator');
 
+        // --- State ---
         let pdfText = '';
         let textChunks = [];
         let chatHistory = [];
 
         // --- Event Listeners ---
-
         pdfUploadInput.addEventListener('change', handlePdfUpload);
         sendButton.addEventListener('click', handleSendMessage);
         userInput.addEventListener('keydown', (e) => {
@@ -150,18 +166,48 @@
             }
         });
 
-        // --- Core Functions ---
+        // Drag and Drop functionality for PDF upload
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            pdfUploadLabel.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            pdfUploadLabel.addEventListener(eventName, () => pdfUploadLabel.classList.add('dragging'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            pdfUploadLabel.addEventListener(eventName, () => pdfUploadLabel.classList.remove('dragging'), false);
+        });
+        pdfUploadLabel.addEventListener('drop', handleDrop, false);
 
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) {
+                pdfUploadInput.files = files;
+                handlePdfUpload({ target: pdfUploadInput });
+            }
+        }
+
+
+        // --- Core Functions ---
         async function handlePdfUpload(event) {
             const file = event.target.files[0];
             if (!file || file.type !== 'application/pdf') {
                 pdfStatus.textContent = 'Please select a valid PDF file.';
+                pdfStatus.classList.add('text-red-500');
                 return;
             }
 
             pdfStatus.textContent = `Loading "${file.name}"...`;
+            pdfStatus.classList.remove('text-red-500');
             processingIndicator.classList.remove('hidden');
             processingIndicator.classList.add('flex');
+            chatHistory = []; // Reset chat history on new upload
 
             try {
                 const reader = new FileReader();
@@ -175,17 +221,19 @@
                         fullText += textContent.items.map(item => item.str).join(' ') + '\n';
                     }
                     pdfText = fullText;
-                    textChunks = splitTextIntoChunks(pdfText, 2000); // Split into chunks of 2000 chars
+                    textChunks = splitTextIntoChunks(pdfText, 2000);
                     
                     pdfStatus.textContent = `✅ Ready: "${file.name}"`;
                     userInput.disabled = false;
                     sendButton.disabled = false;
-                    addMessageToChat('bot', 'PDF processed successfully! You can now ask questions.');
+                    chatContainer.innerHTML = ''; // Clear chat
+                    addMessageToChat('bot', `PDF processed successfully! Feel free to ask any questions about "${file.name}".`);
                 };
                 reader.readAsArrayBuffer(file);
             } catch (error) {
                 console.error('Error processing PDF:', error);
                 pdfStatus.textContent = 'Error processing PDF.';
+                pdfStatus.classList.add('text-red-500');
                 addMessageToChat('bot', 'Sorry, there was an error processing the PDF. Please try another file.');
             } finally {
                 processingIndicator.classList.add('hidden');
@@ -195,13 +243,8 @@
         
         async function handleSendMessage() {
             const userQuery = userInput.value.trim();
-            const apiKey = apiKeyInput.value.trim();
 
             if (!userQuery) return;
-            if (!apiKey) {
-                addMessageToChat('bot', 'Please enter your API key before sending a message.');
-                return;
-            }
             if (!pdfText) {
                 addMessageToChat('bot', 'Please upload a PDF file first.');
                 return;
@@ -212,30 +255,19 @@
             showLoadingIndicator();
 
             try {
-                // 1. Find relevant context from the PDF
                 const context = findRelevantContext(userQuery, textChunks);
-
-                // 2. Construct the prompt
-                const prompt = `
-                    Based on the following context from a PDF document and our chat history, please provide a helpful and concise answer to the user's question.
+                const prompt = `Based on the following context from a PDF document and our chat history, please provide a helpful and concise answer to the user's question. If the context doesn't contain the answer, say that you couldn't find the information in the document.
                     
-                    ---
-                    CONTEXT FROM PDF:
+                    --- CONTEXT FROM PDF ---
                     ${context}
-                    ---
-                    CHAT HISTORY:
+                    --- CHAT HISTORY ---
                     ${formatChatHistory(chatHistory)}
-                    ---
-                    USER'S QUESTION:
+                    --- USER'S QUESTION ---
                     "${userQuery}"
-                    ---
+                    --- ANSWER ---`;
 
-                    ANSWER:
-                `;
-
-                // 3. Call Gemini API
-                const model = 'gemini-2.5-flash-preview-09-2025'; // Using the specified model
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                const model = 'gemini-2.5-flash-preview-09-2025';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
                 const payload = {
                     contents: [{ parts: [{ text: prompt }] }],
@@ -258,20 +290,17 @@
                 hideLoadingIndicator();
                 addMessageToChat('bot', botResponse);
                 
-                // Update chat history
                 chatHistory.push({ role: 'user', text: userQuery });
                 chatHistory.push({ role: 'bot', text: botResponse });
-
 
             } catch (error) {
                 console.error('Error calling Gemini API:', error);
                 hideLoadingIndicator();
-                addMessageToChat('bot', `Sorry, an error occurred: ${error.message}`);
+                addMessageToChat('bot', `Sorry, an error occurred: ${error.message}. Please check your API key and network connection.`);
             }
         }
         
         // --- Helper Functions ---
-
         function addMessageToChat(sender, message) {
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `message-bubble ${sender === 'user' ? 'user-message' : 'bot-message'}`;
@@ -279,7 +308,6 @@
             const proseDiv = document.createElement('div');
             proseDiv.className = 'prose';
             
-            // A simple way to format basic markdown like **bold** and *italic*
             let formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedMessage = formattedMessage.replace(/\*(.*?)\*/g, '<em>$1</em>');
             formattedMessage = formattedMessage.replace(/\n/g, '<br>');
@@ -300,10 +328,7 @@
         }
 
         function hideLoadingIndicator() {
-            const indicator = document.getElementById('loading-indicator');
-            if (indicator) {
-                indicator.remove();
-            }
+            document.getElementById('loading-indicator')?.remove();
         }
 
         function splitTextIntoChunks(text, chunkSize) {
@@ -315,32 +340,26 @@
         }
 
         function findRelevantContext(query, chunks) {
-            // This is a simple keyword-based retrieval. 
-            // A more advanced implementation would use embeddings and vector similarity.
-            const queryWords = new Set(query.toLowerCase().split(/\s+/));
+            const queryWords = new Set(query.toLowerCase().split(/\s+/).filter(w => w.length > 2));
             const scoredChunks = chunks.map(chunk => {
                 const chunkWords = new Set(chunk.toLowerCase().split(/\s+/));
                 let score = 0;
                 for (const word of queryWords) {
-                    if (chunkWords.has(word)) {
-                        score++;
-                    }
+                    if (chunkWords.has(word)) score++;
                 }
                 return { chunk, score };
             });
 
             scoredChunks.sort((a, b) => b.score - a.score);
-            
-            // Return the top 2 most relevant chunks
             return scoredChunks.slice(0, 2).map(item => item.chunk).join('\n\n---\n\n');
         }
 
         function formatChatHistory(history) {
             if (history.length === 0) return "No previous conversation.";
-            // Get the last 4 messages (2 turns)
             return history.slice(-4).map(msg => `${msg.role === 'user' ? 'User' : 'Bot'}: ${msg.text}`).join('\n');
         }
-
     </script>
 </body>
 </html>
+
+
